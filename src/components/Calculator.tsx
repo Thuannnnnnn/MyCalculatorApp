@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Button, StyleSheet } from 'react-native';
-//var RNFS = require('react-native-fs');
+import { View, Text, Button, StyleSheet, Alert } from 'react-native';
+import RNFS from 'react-native-fs'; // import module với loại rõ ràng
 
 const Calculator: React.FC = () => {
   const [result, setResult] = useState<string>('');
@@ -11,16 +11,31 @@ const Calculator: React.FC = () => {
 
   const calculate = async () => {
     try {
-      setResult(eval(result).toString());
+      const calculatedResult = eval(result).toString();
+      setResult(calculatedResult);
 
-      //const path = RNFS.DocumentDirectoryPath + '/calculationHistory.json';
+      const path = RNFS.DocumentDirectoryPath + '/calculationHistory.json';
       const logEntry = {
-        result: result,
+        result: calculatedResult,
         timestamp: new Date().toISOString(),
       };
-      //console.log(logEntry+" ,"+path);
+
+      const fileExists = await RNFS.exists(path);
+      let currentData = [];
+      if (fileExists) {
+        const fileContent = await RNFS.readFile(path);
+        currentData = JSON.parse(fileContent);
+      }
+
+      currentData.push(logEntry);
+      await RNFS.writeFile(path, JSON.stringify(currentData, null, 2), 'utf8');
+      Alert.alert('Success', `Result and timestamp saved to ${path}`);
     } catch (e) {
-      setResult('Error');
+      if (e instanceof Error) {
+        Alert.alert('Error', `Failed to save result: ${e.message}`);
+      } else {
+        Alert.alert('Error', `Failed to save result: Unknown error`);
+      }
     }
   };
 
@@ -72,7 +87,7 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: 'row',
     marginBottom: 10,
-    gap: 10
+    gap: 10,
   },
 });
 
